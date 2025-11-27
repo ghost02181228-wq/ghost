@@ -2,9 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ] # 或 master，取決於您的預設分支名稱
+    branches: [ main ]
+  workflow_dispatch:
 
-# 設定權限以允許佈署到 GitHub Pages
 permissions:
   contents: read
   pages: write
@@ -15,34 +15,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout (檢出程式碼)
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (設定 Node 環境)
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # cache: 'npm'  <-- 暫時註解掉，避免因為沒有 package-lock.json 而報錯
 
-      - name: Install dependencies (安裝依賴)
-        run: npm ci
+      - name: Install dependencies
+        # 使用 npm install 而非 npm ci，允許在沒有 lock file 的情況下安裝
+        run: npm install
 
-      - name: Build (編譯專案)
+      - name: Build
         run: npm run build
         env:
           # 這裡將 GitHub Secrets 注入到編譯環境中
-          # 注意：Vite 會將 VITE_ 開頭的變數打包進 HTML/JS 中
           VITE_FINNHUB_API_KEY: ${{ secrets.VITE_FINNHUB_API_KEY }}
           VITE_FIREBASE_CONFIG_STRING: ${{ secrets.VITE_FIREBASE_CONFIG_STRING }}
-          # 您的程式碼 constants.ts 會讀取 process.env.API_KEY
           API_KEY: ${{ secrets.API_KEY }}
-          # 告訴 vite.config.ts 我們正在跑 Pages 佈署，以設定正確的 base path
           GITHUB_PAGES: true
 
-      - name: Upload artifact (上傳構建結果)
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # Vite 預設輸出目錄
+          path: ./dist
 
   deploy:
     environment:
@@ -51,6 +49,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages (佈署)
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
